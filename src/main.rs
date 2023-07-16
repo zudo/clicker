@@ -74,9 +74,9 @@ fn main() {
 fn click() {
     thread::spawn(|| {
         simulate(&ButtonRelease(Left)).unwrap();
-        thread::sleep(Duration::from_millis(25));
+        thread::sleep(Duration::from_millis(1));
         simulate(&ButtonPress(Left)).unwrap();
-        thread::sleep(Duration::from_millis(25));
+        thread::sleep(Duration::from_millis(1));
         simulate(&ButtonRelease(Left)).unwrap();
     });
 }
