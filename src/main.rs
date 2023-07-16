@@ -1,9 +1,4 @@
-use rdev::listen;
-use rdev::simulate;
-use rdev::Button::Left;
-use rdev::Event;
-use rdev::EventType::ButtonPress;
-use rdev::EventType::ButtonRelease;
+use inputbot::MouseButton::*;
 use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -12,30 +7,26 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
-const THRESHOLD: f32 = 6.0;
-const MULTIPLIER: f32 = 1.5;
+const THRESHOLD: f32 = 4.0;
+const MULTIPLIER: f32 = 2.0;
 const DELAY: Duration = Duration::from_millis(50);
 fn main() {
-    let clicks = Arc::new(Mutex::new(VecDeque::new()));
+    let clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
     let clicks_simulated = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
     let state = Arc::new(AtomicBool::new(false));
     {
         let clicks = clicks.clone();
         let state = state.clone();
         thread::spawn(move || {
-            let callback = move |event: Event| match event.event_type {
-                ButtonPress(Left) => {
-                    clicks.lock().unwrap().push_back(Instant::now());
-                    state.store(true, Ordering::Relaxed);
+            LeftButton.bind(move || {
+                clicks.lock().unwrap().push_back(Instant::now());
+                state.store(true, Ordering::Relaxed);
+                while LeftButton.is_pressed() {
+                    thread::sleep(Duration::from_millis(1));
                 }
-                ButtonRelease(Left) => {
-                    state.store(false, Ordering::Relaxed);
-                }
-                _ => {}
-            };
-            if let Err(e) = listen(callback) {
-                println!("{:?}", e);
-            }
+                state.store(false, Ordering::Relaxed);
+            });
+            inputbot::handle_input_events();
         });
     }
     {
@@ -81,11 +72,11 @@ fn main() {
 fn click(state: Arc<AtomicBool>) {
     thread::spawn(move || {
         if state.load(Ordering::Relaxed) {
-            simulate(&ButtonRelease(Left)).unwrap();
+            LeftButton.release();
             thread::sleep(Duration::from_millis(1));
         }
-        simulate(&ButtonPress(Left)).unwrap();
+        LeftButton.press();
         thread::sleep(Duration::from_millis(1));
-        simulate(&ButtonRelease(Left)).unwrap();
+        LeftButton.release();
     });
 }
