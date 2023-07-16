@@ -33,7 +33,7 @@ fn main() {
         let clicks = clicks.clone();
         let clicks_simulated = clicks_simulated.clone();
         thread::spawn(move || loop {
-            thread::sleep(Duration::from_millis(20));
+            thread::sleep(DELAY);
             let mut mg_clicks = clicks.lock().unwrap();
             let mut mg_clicks_simulated = clicks_simulated.lock().unwrap();
             while mg_clicks.len() > 0 && mg_clicks[0].elapsed() > Duration::from_secs(1) {
