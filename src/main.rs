@@ -11,8 +11,8 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: f32 = 5.0;
-const MULTIPLIER: f32 = 3.0;
-const DELAY: Duration = Duration::from_millis(100);
+const MULTIPLIER: f32 = 2.0;
+const DELAY: Duration = Duration::from_millis(50);
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::new()));
     let clicks_simulated = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
@@ -35,7 +35,7 @@ fn main() {
         let clicks = clicks.clone();
         let clicks_simulated = clicks_simulated.clone();
         thread::spawn(move || loop {
-            thread::sleep(Duration::from_millis(1));
+            thread::sleep(Duration::from_millis(20));
             let mut mg_clicks = clicks.lock().unwrap();
             let mut mg_clicks_simulated = clicks_simulated.lock().unwrap();
             while mg_clicks.len() > 0 && mg_clicks[0].elapsed() > Duration::from_secs(1) {
@@ -74,9 +74,9 @@ fn main() {
 fn click() {
     thread::spawn(|| {
         simulate(&ButtonRelease(Left)).unwrap();
-        thread::sleep(Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(25));
         simulate(&ButtonPress(Left)).unwrap();
-        thread::sleep(Duration::from_millis(1));
+        thread::sleep(Duration::from_millis(25));
         simulate(&ButtonRelease(Left)).unwrap();
     });
 }
