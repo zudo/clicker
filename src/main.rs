@@ -13,7 +13,7 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: f32 = 6.0;
-const MULTIPLIER: f32 = 2.0;
+const MULTIPLIER: f32 = 1.5;
 const DELAY: Duration = Duration::from_millis(50);
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::new()));
