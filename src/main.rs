@@ -4,32 +4,25 @@ use rdev::Button::Left;
 use rdev::Event;
 use rdev::EventType::ButtonPress;
 use rdev::EventType::ButtonRelease;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: f32 = 5.0;
-const MULTIPLIER: f32 = 2.0;
-const DELAY: u64 = 150;
+const MULTIPLIER: f32 = 4.0;
+const DELAY: Duration = Duration::from_millis(100);
 fn main() {
-    let button_press_left = Arc::new(Mutex::new(0));
-    let button_press_left_simulated = Arc::new(Mutex::new(0));
-    let elapsed = Arc::new(Mutex::new(Duration::from_secs(0)));
-    let cps = Arc::new(Mutex::new(0.0));
+    let clicks = Arc::new(Mutex::new(VecDeque::new()));
     {
-        let button_press_left = button_press_left.clone();
-        let elapsed = elapsed.clone();
+        let clicks = clicks.clone();
         thread::spawn(move || {
-            let mut start = Instant::now();
             let callback = move |event: Event| match event.event_type {
                 ButtonPress(Left) => {
-                    *button_press_left.lock().unwrap() += 1;
-                    start = Instant::now();
+                    clicks.lock().unwrap().push_back(Instant::now());
                 }
-                ButtonRelease(Left) => {
-                    *elapsed.lock().unwrap() = start.elapsed();
-                }
+                ButtonRelease(Left) => {}
                 _ => {}
             };
             if let Err(e) = listen(callback) {
@@ -38,38 +31,44 @@ fn main() {
         });
     }
     {
-        let button_press_left_simulated = button_press_left_simulated.clone();
-        let cps = cps.clone();
+        let clicks = clicks.clone();
         thread::spawn(move || loop {
-            thread::sleep(Duration::from_millis(DELAY));
-            let mut cps = cps.lock().unwrap();
-            *cps += *button_press_left.lock().unwrap() as f32 * (1000 / DELAY) as f32;
-            let cps_simulated =
-                *button_press_left_simulated.lock().unwrap() as f32 * (1000 / DELAY) as f32;
-            *cps -= cps_simulated;
-            *cps /= 2.0;
-            *button_press_left.lock().unwrap() = 0;
-            *button_press_left_simulated.lock().unwrap() = 0;
-            println!("CPS: {:.2}, SIMULATED: {:.2}", cps, cps_simulated);
+            thread::sleep(Duration::from_millis(1));
+            let mut clicks = clicks.lock().unwrap();
+            while clicks.len() > 0 && clicks[0].elapsed() > Duration::from_secs(1) {
+                clicks.pop_front();
+            }
+            let cps = clicks.len();
+            println!(
+                "CPS: {}, {:.0?}",
+                cps,
+                clicks.iter().map(|x| x.elapsed()).collect::<Vec<_>>()
+            );
         });
     }
     loop {
-        thread::sleep(Duration::from_millis(10));
-        let cps = *cps.lock().unwrap();
-        if cps > THRESHOLD {
-            let button_press_left_simulated = button_press_left_simulated.clone();
-            thread::spawn(move || {
-                *button_press_left_simulated.lock().unwrap() += 1;
-                thread::sleep(Duration::from_millis(10));
-                simulate(&ButtonRelease(Left)).unwrap();
-                thread::sleep(Duration::from_millis(10));
-                simulate(&ButtonPress(Left)).unwrap();
-                thread::sleep(Duration::from_millis(10));
-                simulate(&ButtonRelease(Left)).unwrap();
-            });
-            thread::sleep(Duration::from_millis(
-                (1000.0 / (MULTIPLIER * cps - cps)) as u64,
-            ));
+        let cps = (clicks.lock().unwrap().len() + 1) as f32;
+        let millis = (1000.0 / (cps * MULTIPLIER)) as u64;
+        thread::sleep(Duration::from_millis(millis));
+        let mg_clicks = clicks.lock().unwrap();
+        println!(
+            "CPS: {}, {:.0?}",
+            cps,
+            mg_clicks.iter().map(|x| x.elapsed()).collect::<Vec<_>>()
+        );
+        if let Some(latest) = mg_clicks.back() {
+            if cps > THRESHOLD && latest.elapsed() < DELAY {
+                drop(mg_clicks);
+                click();
+                clicks.lock().unwrap().pop_back();
+            }
         }
     }
+}
+fn click() {
+    simulate(&ButtonRelease(Left)).unwrap();
+    thread::sleep(Duration::from_millis(1));
+    simulate(&ButtonPress(Left)).unwrap();
+    thread::sleep(Duration::from_millis(1));
+    simulate(&ButtonRelease(Left)).unwrap();
 }
