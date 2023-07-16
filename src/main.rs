@@ -55,9 +55,9 @@ fn main() {
         });
     }
     loop {
-        let cps = (clicks.lock().unwrap().len() + 1) as f32;
-        let millis = (1000.0 / (cps * MULTIPLIER)) as u64;
-        thread::sleep(Duration::from_millis(millis));
+        let cps = clicks.lock().unwrap().len() as f32;
+        let dur = Duration::from_millis((1000.0 / (cps * MULTIPLIER)) as u64).min(DELAY);
+        thread::sleep(dur);
         let mg_clicks = clicks.lock().unwrap();
         if let Some(latest) = mg_clicks.back() {
             if cps > THRESHOLD && latest.elapsed() < DELAY {
