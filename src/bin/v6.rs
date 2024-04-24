@@ -11,7 +11,7 @@ use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: usize = 3;
 const THRESHOLD_TIME: Duration = Duration::from_millis(500); // only clicks within this time are considered
-const N_EXTRA_CLICKS: usize = 2;
+const CPS_TARGET: usize = 19;
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
     let simulated_clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
@@ -65,6 +65,7 @@ fn bind_mouse_clicks(
                     {
                         perform_extra_clicks(
                             self_click.clone(),
+                            clicks_guard.len(),
                             simulated_clicks.clone(),
                             min_interval,
                         );
@@ -124,12 +125,15 @@ fn spawn_debug_thread(
 }
 fn perform_extra_clicks(
     self_click: Arc<AtomicBool>,
+    clicks: usize,
     simulated_clicks: Arc<Mutex<VecDeque<Instant>>>,
     min_interval: Duration,
 ) {
-    let extra_click_delay = min_interval / (N_EXTRA_CLICKS as u32 + 1); // Calculate dynamic delay based on the minimum interval
-    let extra_click_delay = extra_click_delay.min(Duration::from_millis(50));
-    for _ in 0..N_EXTRA_CLICKS {
+    let diff = CPS_TARGET.saturating_sub(clicks);
+    let n_extra_clicks = (diff as f32 / clicks as f32) + 1.0;
+    let extra_click_delay = min_interval / (n_extra_clicks + 1.0) as u32; // Calculate dynamic delay based on the minimum interval
+    let extra_click_delay = extra_click_delay.min(Duration::from_millis(1000 / CPS_TARGET as u64));
+    for _ in 0..n_extra_clicks as usize {
         thread::sleep(extra_click_delay);
         self_click.store(true, Ordering::Relaxed);
         LeftButton.press();
