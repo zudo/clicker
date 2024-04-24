@@ -26,7 +26,6 @@ fn main() {
     bind_keyboard_commands(state.clone());
     spawn_cleanup_thread(clicks.clone(), simulated_clicks.clone());
     spawn_debug_thread(clicks.clone(), simulated_clicks.clone());
-    // main_loop(kill_switch.clone());
     thread::park(); // keep the main thread alive
 }
 fn bind_mouse_clicks(
@@ -123,22 +122,12 @@ fn spawn_debug_thread(
         );
     });
 }
-// fn main_loop(kill_switch: Arc<AtomicBool>) {
-//     loop {
-//         thread::sleep(Duration::from_secs(1));
-//         if kill_switch.load(Ordering::Relaxed) {
-//             println!("Kill switch activated. Exiting...");
-//             break;
-//         }
-//     }
-// }
 fn perform_extra_clicks(
     self_click: Arc<AtomicBool>,
     simulated_clicks: Arc<Mutex<VecDeque<Instant>>>,
     min_interval: Duration,
 ) {
     let extra_click_delay = min_interval / (N_EXTRA_CLICKS as u32 + 1); // Calculate dynamic delay based on the minimum interval
-                                                                        // let extra_click_delay = extra_click_delay * 3 / 5;
     let extra_click_delay = extra_click_delay.min(Duration::from_millis(50));
     for _ in 0..N_EXTRA_CLICKS {
         thread::sleep(extra_click_delay);
