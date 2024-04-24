@@ -10,7 +10,7 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: f32 = 5.0;
-const N_EXTRA_CLICKS: usize = 1;
+const N_EXTRA_CLICKS: usize = 4;
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
     let simulated_clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
@@ -136,7 +136,7 @@ fn perform_extra_clicks(
             thread::sleep(extra_click_delay);
         }
         LeftButton.press();
-        println!("{}", "[click]".red());
+        println!("{} {:.0?}", "[click]".red(), extra_click_delay);
         thread::sleep(Duration::from_millis(1));
         LeftButton.release();
         simulated_clicks.lock().unwrap().push_back(Instant::now());
