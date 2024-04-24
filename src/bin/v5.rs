@@ -10,7 +10,7 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: f32 = 3.0;
-const THRESHOLD_TIME: Duration = Duration::from_millis(400);
+const THRESHOLD_TIME: Duration = Duration::from_millis(400); // only clicks within this time are considered
 const N_EXTRA_CLICKS: usize = 2;
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
