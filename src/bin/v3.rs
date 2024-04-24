@@ -1,5 +1,6 @@
 use inputbot::KeybdKey::*;
 use inputbot::MouseButton::*;
+use owo_colors::OwoColorize;
 use std::collections::VecDeque;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
@@ -10,7 +11,7 @@ use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: f32 = 4.0;
 const N_EXTRA_CLICKS: usize = 1; // Number of extra clicks to perform when over threshold
-const EXTRA_CLICK_DELAY: Duration = Duration::from_millis(10); // Delay between extra clicks
+const EXTRA_CLICK_DELAY: Duration = Duration::from_millis(20); // Delay between extra clicks
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
     let simulated_clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
@@ -25,6 +26,7 @@ fn main() {
         thread::spawn(move || {
             LeftButton.bind(move || {
                 if !self_click.load(Ordering::Relaxed) {
+                    println!("{}", "[click]".green());
                     let now = Instant::now();
                     let mut clicks_guard = clicks.lock().unwrap();
                     clicks_guard.push_back(now);
@@ -75,14 +77,13 @@ fn main() {
     let clicks_debug = clicks.clone();
     let simulated_clicks_debug = simulated_clicks.clone();
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(500));
         let clicks_guard = clicks_debug.lock().unwrap();
         let simulated_clicks_guard = simulated_clicks_debug.lock().unwrap();
         println!(
-            "Actual CPS: {}, Simulated CPS: {}, Time since last actual click: {:?}",
+            "Actual CPS: {}, Simulated CPS: {}",
             clicks_guard.len(),
             simulated_clicks_guard.len(),
-            clicks_guard.iter().map(|x| x.elapsed()).collect::<Vec<_>>(),
         );
     });
     // Keep the main thread alive
@@ -107,6 +108,7 @@ fn perform_extra_clicks(
             thread::sleep(Duration::from_millis(1));
         }
         LeftButton.press();
+        println!("{}", "[click]".red());
         thread::sleep(Duration::from_millis(1));
         LeftButton.release();
         simulated_clicks.lock().unwrap().push_back(Instant::now()); // Log simulated click
