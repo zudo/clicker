@@ -9,9 +9,8 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
-const THRESHOLD: f32 = 4.0;
+const THRESHOLD: f32 = 5.0;
 const N_EXTRA_CLICKS: usize = 1;
-const EXTRA_CLICK_DELAY: Duration = Duration::from_millis(20);
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
     let simulated_clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
@@ -42,13 +41,27 @@ fn bind_mouse_clicks(
                 let now = Instant::now();
                 let mut clicks_guard = clicks.lock().unwrap();
                 clicks_guard.push_back(now);
-                if clicks_guard.len() as f32 > THRESHOLD {
-                    perform_extra_clicks(
-                        state.clone(),
-                        self_click.clone(),
-                        simulated_clicks.clone(),
-                        N_EXTRA_CLICKS,
-                    );
+                if clicks_guard.len() > 1 {
+                    // Calculate minimum interval from the last two recorded clicks
+                    let intervals: Vec<_> = clicks_guard
+                        .iter()
+                        .zip(clicks_guard.iter().skip(1))
+                        .map(|(&prev, &curr)| curr.duration_since(prev))
+                        .collect();
+                    let min_interval = intervals
+                        .iter()
+                        .min()
+                        .cloned()
+                        .unwrap_or(Duration::from_millis(10)); // use a low default value
+                    if clicks_guard.len() as f32 > THRESHOLD {
+                        perform_extra_clicks(
+                            state.clone(),
+                            self_click.clone(),
+                            simulated_clicks.clone(),
+                            N_EXTRA_CLICKS,
+                            min_interval,
+                        );
+                    }
                 }
                 while LeftButton.is_pressed() {
                     thread::sleep(Duration::from_millis(1));
@@ -115,19 +128,21 @@ fn perform_extra_clicks(
     self_click: Arc<AtomicBool>,
     simulated_clicks: Arc<Mutex<VecDeque<Instant>>>,
     n: usize,
+    min_interval: Duration,
 ) {
     self_click.store(true, Ordering::Relaxed);
+    let extra_click_delay = min_interval / (n as u32 + 1); // Calculate dynamic delay based on the minimum interval
     for _ in 0..n {
         if state.load(Ordering::Relaxed) {
             LeftButton.release();
-            thread::sleep(Duration::from_millis(1));
+            thread::sleep(extra_click_delay);
         }
         LeftButton.press();
         println!("{}", "[click]".red());
         thread::sleep(Duration::from_millis(1));
         LeftButton.release();
         simulated_clicks.lock().unwrap().push_back(Instant::now());
-        thread::sleep(EXTRA_CLICK_DELAY);
+        thread::sleep(extra_click_delay);
     }
     self_click.store(false, Ordering::Relaxed);
 }
