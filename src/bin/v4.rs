@@ -58,7 +58,6 @@ fn bind_mouse_clicks(
                             state.clone(),
                             self_click.clone(),
                             simulated_clicks.clone(),
-                            N_EXTRA_CLICKS,
                             min_interval,
                         );
                     }
@@ -127,12 +126,11 @@ fn perform_extra_clicks(
     state: Arc<AtomicBool>,
     self_click: Arc<AtomicBool>,
     simulated_clicks: Arc<Mutex<VecDeque<Instant>>>,
-    n: usize,
     min_interval: Duration,
 ) {
     self_click.store(true, Ordering::Relaxed);
-    let extra_click_delay = min_interval / (n as u32 + 1); // Calculate dynamic delay based on the minimum interval
-    for _ in 0..n {
+    let extra_click_delay = min_interval / (N_EXTRA_CLICKS as u32 + 1); // Calculate dynamic delay based on the minimum interval
+    for _ in 0..N_EXTRA_CLICKS {
         if state.load(Ordering::Relaxed) {
             LeftButton.release();
             thread::sleep(extra_click_delay);
