@@ -103,12 +103,14 @@ fn spawn_debug_thread(
     simulated_clicks: Arc<Mutex<VecDeque<Instant>>>,
 ) {
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(500));
         let clicks_guard = clicks.lock().unwrap();
         let simulated_clicks_guard = simulated_clicks.lock().unwrap();
         println!(
-            "CPS: {:<2} SIM: {:<2}",
+            "              {} {:<2} {} {:<2}",
+            "CPS".dimmed(),
             clicks_guard.len(),
+            "SIM".dimmed(),
             simulated_clicks_guard.len()
         );
     });
