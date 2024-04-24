@@ -10,7 +10,7 @@ use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 const THRESHOLD: f32 = 5.0;
-const N_EXTRA_CLICKS: usize = 4;
+const N_EXTRA_CLICKS: usize = 2;
 fn main() {
     let clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
     let simulated_clicks = Arc::new(Mutex::new(VecDeque::<Instant>::new()));
@@ -71,7 +71,7 @@ fn bind_mouse_clicks(
     });
 }
 fn bind_keyboard_commands(state: Arc<AtomicBool>, kill_switch: Arc<AtomicBool>) {
-    F1Key.bind(move || {
+    CapsLockKey.bind(move || {
         let currently_enabled =
             kill_switch.swap(!kill_switch.load(Ordering::Relaxed), Ordering::Relaxed);
         state.store(!currently_enabled, Ordering::Relaxed);
@@ -103,11 +103,11 @@ fn spawn_debug_thread(
     simulated_clicks: Arc<Mutex<VecDeque<Instant>>>,
 ) {
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(100));
         let clicks_guard = clicks.lock().unwrap();
         let simulated_clicks_guard = simulated_clicks.lock().unwrap();
         println!(
-            "Actual CPS: {}, Simulated CPS: {}",
+            "CPS: {:<2} SIM: {:<2}",
             clicks_guard.len(),
             simulated_clicks_guard.len()
         );
@@ -130,6 +130,8 @@ fn perform_extra_clicks(
 ) {
     self_click.store(true, Ordering::Relaxed);
     let extra_click_delay = min_interval / (N_EXTRA_CLICKS as u32 + 1); // Calculate dynamic delay based on the minimum interval
+    let extra_click_delay = extra_click_delay * 3 / 5;
+    let extra_click_delay = extra_click_delay.min(Duration::from_millis(50));
     for _ in 0..N_EXTRA_CLICKS {
         if state.load(Ordering::Relaxed) {
             LeftButton.release();
